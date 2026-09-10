@@ -57,25 +57,49 @@ def harvest(target: str, dest: Path, kind: str = "auto", limit: int = 0) -> dict
     return result
 
 
+SESSIONS = Path.home() / "Desktop" / "research-rig" / "sessions"
+
+
+def _rig_profile(target: str) -> Path | None:
+    """
+    The browser profile login() created for this site, if there is one.
+
+    This is what makes login() a single flow for every site: sign in once in the
+    window it opens, and gallery-dl reads the cookies straight out of that same
+    profile - no separate cookie export, and your real browser is never touched.
+    """
+    host = target.split("//", 1)[-1].split("/", 1)[0].lower()
+    if host.startswith("www."):
+        host = host[4:]
+    for candidate in (host, ".".join(host.split(".")[-2:])):
+        d = SESSIONS / candidate
+        if (d / "Default" / "Cookies").is_file():
+            return d
+    return None
+
+
 def _cookie_args(target: str) -> list[str]:
     """
     Cookies for sites that show nothing when logged out.
 
-    RIG_COOKIES may be a browser name (chrome, firefox, safari, edge, brave) or
-    a path to a cookies.txt file. Unset, we fall through and the caller gets a
-    clear message rather than a silent empty download.
+    Preference order: an explicit RIG_COOKIES (a browser name, or a path to a
+    cookies.txt), then the profile login() made for this site.
     """
     if not any(h in target for h in NEEDS_COOKIES):
         return []
-    if not COOKIE_SOURCE:
-        return []
-    if Path(COOKIE_SOURCE).expanduser().is_file():
-        return ["--cookies", str(Path(COOKIE_SOURCE).expanduser())]
-    return ["--cookies-from-browser", COOKIE_SOURCE]
+    if COOKIE_SOURCE:
+        if Path(COOKIE_SOURCE).expanduser().is_file():
+            return ["--cookies", str(Path(COOKIE_SOURCE).expanduser())]
+        return ["--cookies-from-browser", COOKIE_SOURCE]
+    profile = _rig_profile(target)
+    if profile:
+        return ["--cookies-from-browser", f"chromium:{profile}"]
+    return []
 
 
 def _needs_cookies(target: str) -> bool:
-    return any(h in target for h in NEEDS_COOKIES) and not COOKIE_SOURCE
+    return (any(h in target for h in NEEDS_COOKIES)
+            and not COOKIE_SOURCE and _rig_profile(target) is None)
 
 
 def _gallery_dl(target: str, dest: Path, limit: int) -> dict:
@@ -88,8 +112,11 @@ def _gallery_dl(target: str, dest: Path, limit: int) -> dict:
             "This site serves nothing to a logged-out client, and no cookie "
             "source is set. Instagram in particular replies 'user could not be "
             "found', which looks like a missing account but is a missing login.\n"
-            "Fix: set RIG_COOKIES to a browser name (e.g. chrome) or to the path "
-            "of an exported cookies.txt, then try again.")}
+            "Fix, easiest first:\n"
+            "  1. login('instagram.com') - sign in once in the window it opens, "
+            "then re-run this. Nothing else to configure.\n"
+            "  2. export RIG_COOKIES=chrome - use your real browser's cookies.\n"
+            "  3. export RIG_COOKIES=/path/to/cookies.txt")}
 
     cmd = ["gallery-dl", "--dest", str(dest), "--write-metadata", "--no-part"]
     cmd += _cookie_args(target)

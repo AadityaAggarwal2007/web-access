@@ -135,7 +135,18 @@ the session, and every run afterwards is already signed in.
 account per 24 hours, and more than 100–150 profile loads in an hour is the most
 common trigger for a lock.
 
-### Instagram needs cookies
+### Instagram, Facebook, LinkedIn
+
+Full walkthrough in **[LOGIN.md](LOGIN.md)**. The short version:
+
+```bash
+uv run python -c "from rig.ladder import login; print(login('instagram.com', minutes=8))"
+```
+
+Sign in in the window that opens, then leave it — it closes itself and saves the
+session. `harvest()` picks those cookies up automatically, no extra config.
+
+### Or use your own browser's cookies
 
 gallery-dl gets everything from Instagram in one command — but only once logged
 in. Anonymous requests get `Requested user could not be found`, which reads like
