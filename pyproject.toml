@@ -1,0 +1,25 @@
+[project]
+name = "research-rig"
+version = "0.1.0"
+description = "Gives your own AI eyes on the web: search, read, harvest, extract - cheapest tool first."
+requires-python = ">=3.11,<3.14"
+
+dependencies = [
+    "httpx>=0.27",             # gateway client
+    "mcp>=2.2",                # the MCP server your AI talks to
+    "scrapling[fetchers,rag]>=0.4.15",  # tiers 2-4: HTTP -> stealth -> real Chrome
+    "gallery-dl>=1.27",        # ~390 sites of photos
+    "yt-dlp>=2024.8.6",        # video from almost anywhere
+    "pdfplumber>=0.11",        # PDFs: magazines, reports, LinkedIn documents
+]
+
+[project.optional-dependencies]
+# Tier 6. Heavy, and only needed for sites that genuinely require clicking.
+agent = ["browser-use>=0.2"]
+# Skyvern: best-in-class form filling. AGPL - fine for personal use.
+forms = ["skyvern>=0.1"]
+# Faster, better image extraction from PDFs than pdfplumber.
+pdf = ["pymupdf>=1.24"]
+
+[tool.uv]
+package = false
